@@ -1,0 +1,702 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+/* Enhanced Comparison Page Styles */
+.comparison-container {
+    animation: fadeIn 0.6s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.page-header h2 {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+}
+
+.page-header .icon {
+    font-size: 2.5rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Enhanced Cards */
+.enhanced-card {
+    border: none;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    overflow: hidden;
+    position: relative;
+}
+
+.enhanced-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s ease;
+}
+
+.enhanced-card:hover::before {
+    transform: scaleX(1);
+}
+
+.enhanced-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 60px rgba(102, 126, 234, 0.2);
+}
+
+.card-header-gradient {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+    border-bottom: 2px solid rgba(102, 126, 234, 0.15);
+    padding: 1.25rem 1.5rem;
+    font-weight: 700;
+}
+
+/* Chart Container */
+#comparison-chart {
+    height: 550px;
+    border-radius: 16px;
+    padding: 1rem;
+}
+
+/* Enhanced Table */
+.enhanced-table {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.enhanced-table thead {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.enhanced-table thead th {
+    border: none;
+    padding: 1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+.enhanced-table tbody tr {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.enhanced-table tbody tr:hover {
+    background: rgba(102, 126, 234, 0.05);
+    transform: scale(1.01);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+}
+
+.enhanced-table tbody td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+.stock-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #2d3748;
+}
+
+.stock-ticker {
+    font-size: 0.75rem;
+    color: #718096;
+    font-weight: 500;
+}
+
+/* Price Displays */
+.price-display {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #2d3748;
+}
+
+.price-primary {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    padding: 0.4rem 0.8rem;
+    border-radius: 10px;
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    display: inline-block;
+}
+
+.price-secondary {
+    color: #667eea;
+    font-weight: 600;
+}
+
+.predicted-price {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.1));
+    padding: 0.4rem 0.8rem;
+    border-radius: 10px;
+    border: 2px solid rgba(245, 158, 11, 0.2);
+    display: inline-block;
+    color: #f59e0b;
+    font-weight: 700;
+}
+
+/* Change Indicators */
+.positive {
+    color: #10b981 !important;
+    font-weight: 800;
+    font-size: 0.95rem;
+}
+
+.negative {
+    color: #ef4444 !important;
+    font-weight: 800;
+    font-size: 0.95rem;
+}
+
+/* Enhanced Badges */
+.status-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    animation: badgePulse 2s infinite;
+}
+
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.badge-bullish {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.badge-bearish {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+/* Market Summary Cards */
+.summary-section {
+    margin-top: 2rem;
+}
+
+.summary-card {
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    height: 100%;
+}
+
+.summary-card:hover {
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
+.summary-card-gaining {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.summary-card-losing {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.summary-card-avg {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.summary-card-total {
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    color: white;
+}
+
+.summary-card .card-body {
+    padding: 2rem;
+    text-align: center;
+}
+
+.summary-card h6 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.75rem;
+}
+
+.summary-card h4 {
+    font-size: 2.5rem;
+    font-weight: 900;
+    margin: 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.summary-card .icon {
+    font-size: 2.5rem;
+    opacity: 0.2;
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+}
+
+/* Sort Control */
+.sort-control {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.sort-control label {
+    font-weight: 600;
+    color: #4a5568;
+    margin: 0;
+}
+
+.sort-control select {
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    color: #667eea;
+    background: white;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.sort-control select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+/* Animated Icons */
+.animated-icon {
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+/* Table Responsive Enhancement */
+.table-responsive {
+    border-radius: 12px;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Loading Animation */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.enhanced-card {
+    animation: fadeInUp 0.6s ease;
+}
+
+.enhanced-card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.enhanced-card:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .page-header h2 {
+        font-size: 1.5rem;
+    }
+    
+    .summary-card h4 {
+        font-size: 2rem;
+    }
+    
+    #comparison-chart {
+        height: 400px;
+    }
+    
+    .enhanced-table {
+        font-size: 0.85rem;
+    }
+    
+    .enhanced-table thead th {
+        font-size: 0.7rem;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .enhanced-table tbody td {
+        padding: 0.75rem 0.5rem;
+    }
+}
+</style>
+
+<div class="comparison-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <div class="d-flex align-items-center gap-3">
+                    <i class="fas fa-balance-scale icon"></i>
+                    <div>
+                        <h2 class="mb-1">Stock Comparison</h2>
+                        <p class="text-muted mb-0">Compare performance of all 25 Indian stocks</p>
+                    </div>
+                </div>
+            </div>
+            <div class="d-none d-md-block">
+                <i class="fas fa-chart-line animated-icon" style="font-size: 3rem; color: #667eea; opacity: 0.3;"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Chart -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="enhanced-card">
+                <div class="card-header card-header-gradient">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h5 class="mb-0 d-flex align-items-center gap-2">
+                            <i class="fas fa-chart-area text-primary"></i>
+                            Price Comparison (Last 30 Days)
+                        </h5>
+                        <span class="badge bg-primary">Top 10 Stocks</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="comparison-chart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Performance Table (Full Width) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="enhanced-card">
+                <div class="card-header card-header-gradient">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                        <h5 class="mb-0 d-flex align-items-center gap-2">
+                            <i class="fas fa-table text-primary"></i>
+                            Current Stock Performance
+                        </h5>
+                        <div class="sort-control">
+                            <label for="sort-by">Sort by:</label>
+                            <select id="sort-by" class="form-select">
+                                <option value="name">Name</option>
+                                <option value="price">Current Price</option>
+                                <option value="change">Change %</option>
+                                <option value="predicted">Predicted Price</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table enhanced-table mb-0" id="stocks-table">
+                            <thead>
+                                <tr>
+                                    <th>Stock</th>
+                                    <th>Open Price</th>
+                                    <th>Current Price</th>
+                                    <th>Change (%)</th>
+                                    <th>Status</th>
+                                    <th>Predicted (Next Day)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stock_name, data in comparison_data.items() %}
+                                <tr>
+                                    <td>
+                                        <div class="stock-name">{{ stock_name }}</div>
+                                        <div class="stock-ticker">{{ data.ticker }}</div>
+                                    </td>
+                                    <td>
+                                        <span class="price-display price-secondary">₹{{ (data.current_price * (1 - data.change_percent/100))|round(2) }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="price-display price-primary">₹{{ data.current_price|round(2) }}</span>
+                                    </td>
+                                    <td class="{{ 'positive' if data.change_percent >= 0 else 'negative' }}">
+                                        <i class="fas fa-{{ 'arrow-up' if data.change_percent >= 0 else 'arrow-down' }}"></i>
+                                        {{ data.change_percent|round(2) }}%
+                                    </td>
+                                    <td>
+                                        <span class="status-badge {{ 'badge-bullish' if data.change_percent >= 0 else 'badge-bearish' }}">
+                                            <i class="fas fa-{{ 'chart-line' if data.change_percent >= 0 else 'chart-line-down' }}"></i>
+                                            {{ 'Bullish' if data.change_percent >= 0 else 'Bearish' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="predicted-price">₹{{ (data.current_price * (1 + (data.change_percent * 0.3)/100))|round(2) }}</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Market Summary Section (Bottom) -->
+    <div class="row summary-section">
+        <div class="col-12 mb-3">
+            <h4 class="d-flex align-items-center gap-2">
+                <i class="fas fa-chart-pie" style="color: #667eea;"></i>
+                <span style="background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 800;">Market Summary</span>
+            </h4>
+        </div>
+        
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="summary-card summary-card-gaining">
+                <i class="fas fa-arrow-trend-up icon"></i>
+                <div class="card-body">
+                    <h6>Stocks Gaining</h6>
+                    <h4>{{ summary.gaining }}</h4>
+                    <small style="opacity: 0.8;">Moving Upward</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="summary-card summary-card-losing">
+                <i class="fas fa-arrow-trend-down icon"></i>
+                <div class="card-body">
+                    <h6>Stocks Losing</h6>
+                    <h4>{{ summary.losing }}</h4>
+                    <small style="opacity: 0.8;">Moving Downward</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="summary-card summary-card-avg">
+                <i class="fas fa-percentage icon"></i>
+                <div class="card-body">
+                    <h6>Average Change</h6>
+                    <h4>{{ summary.avg_change|round(2) }}%</h4>
+                    <small style="opacity: 0.8;">Market Average</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="summary-card summary-card-total">
+                <i class="fas fa-building icon"></i>
+                <div class="card-body">
+                    <h6>Total Stocks</h6>
+                    <h4>{{ summary.total_stocks }}</h4>
+                    <small style="opacity: 0.8;">In Portfolio</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const comparisonData = {{ comparison_data|tojson }};
+    const sortSelect = document.getElementById('sort-by');
+    
+    // Enhanced color palette
+    const colors = [
+        '#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe',
+        '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0',
+        '#a8edea', '#fed6e3', '#f857a6', '#ff5858', '#f093fb',
+        '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a',
+        '#fee140', '#30cfd0', '#a8edea', '#fed6e3', '#f857a6'
+    ];
+    
+    // Prepare chart data
+    const traces = [];
+    Object.entries(comparisonData).slice(0, 10).forEach(([stockName, data], index) => {
+        const trace = {
+            x: data.dates.slice(-30),
+            y: data.prices.slice(-30),
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: stockName,
+            line: { 
+                color: colors[index % colors.length], 
+                width: 3,
+                shape: 'spline'
+            },
+            marker: {
+                size: 6,
+                color: colors[index % colors.length],
+                line: {
+                    color: 'white',
+                    width: 2
+                }
+            }
+        };
+        traces.push(trace);
+    });
+    
+    const layout = {
+        title: {
+            text: '<b>Top 10 Stocks - 30-Day Performance Comparison</b>',
+            font: {
+                size: 20,
+                color: '#2d3748',
+                family: 'Inter, sans-serif'
+            }
+        },
+        xaxis: { 
+            title: {
+                text: '<b>Date</b>',
+                font: { size: 14, color: '#4a5568' }
+            },
+            type: 'date',
+            tickformat: '%b %d',
+            gridcolor: 'rgba(0,0,0,0.05)',
+            showline: true,
+            linewidth: 2,
+            linecolor: 'rgba(102, 126, 234, 0.2)'
+        },
+        yaxis: { 
+            title: {
+                text: '<b>Price (₹)</b>',
+                font: { size: 14, color: '#4a5568' }
+            },
+            tickprefix: '₹',
+            gridcolor: 'rgba(0,0,0,0.05)',
+            showline: true,
+            linewidth: 2,
+            linecolor: 'rgba(102, 126, 234, 0.2)'
+        },
+        hovermode: 'x unified',
+        plot_bgcolor: 'rgba(248, 249, 250, 0.5)',
+        paper_bgcolor: 'white',
+        legend: { 
+            orientation: 'h', 
+            y: -0.15,
+            x: 0.5,
+            xanchor: 'center',
+            font: { size: 11 },
+            bgcolor: 'rgba(255, 255, 255, 0.9)',
+            bordercolor: 'rgba(102, 126, 234, 0.2)',
+            borderwidth: 2
+        },
+        margin: { t: 60, b: 80, l: 80, r: 40 },
+        font: { family: 'Inter, sans-serif' }
+    };
+    
+    const config = {
+        responsive: true,
+        displayModeBar: true,
+        displaylogo: false,
+        modeBarButtonsToRemove: ['lasso2d', 'select2d']
+    };
+    
+    Plotly.newPlot('comparison-chart', traces, layout, config);
+    
+    // Sorting functionality
+    sortSelect.addEventListener('change', function() {
+        const tbody = document.querySelector('#stocks-table tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        
+        rows.sort((a, b) => {
+            const sortBy = this.value;
+            const aCells = a.querySelectorAll('td');
+            const bCells = b.querySelectorAll('td');
+            
+            if (sortBy === 'name') {
+                const aName = aCells[0].querySelector('.stock-name').textContent;
+                const bName = bCells[0].querySelector('.stock-name').textContent;
+                return aName.localeCompare(bName);
+            } else if (sortBy === 'price') {
+                const aPrice = parseFloat(aCells[2].textContent.replace('₹', '').trim());
+                const bPrice = parseFloat(bCells[2].textContent.replace('₹', '').trim());
+                return bPrice - aPrice;
+            } else if (sortBy === 'change') {
+                const aChange = parseFloat(aCells[3].textContent.replace('%', '').trim());
+                const bChange = parseFloat(bCells[3].textContent.replace('%', '').trim());
+                return bChange - aChange;
+            } else if (sortBy === 'predicted') {
+                const aPredicted = parseFloat(aCells[5].textContent.replace('₹', '').trim());
+                const bPredicted = parseFloat(bCells[5].textContent.replace('₹', '').trim());
+                return bPredicted - aPredicted;
+            }
+            return 0;
+        });
+        
+        // Clear and re-append sorted rows with animation
+        tbody.style.opacity = '0.5';
+        setTimeout(() => {
+            rows.forEach(row => tbody.appendChild(row));
+            tbody.style.opacity = '1';
+        }, 150);
+    });
+</script>
+{% endblock %}

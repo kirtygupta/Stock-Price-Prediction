@@ -1,0 +1,16 @@
+Lag_1
+Lag_2
+Lag_3
+Lag_4
+Lag_5
+MA_5
+MA_10
+MA_20
+MA_50
+Returns
+Volatility
+Price_Change
+RSI
+BB_Middle
+BB_Upper
+BB_Lower

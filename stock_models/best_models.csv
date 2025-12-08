@@ -1,0 +1,26 @@
+Ticker,Company,Best_Regression,Best_Regression_R2,Best_Classification,Best_Classification_Accuracy
+RELIANCE.NS,Reliance Industries Ltd.,Linear_Regression,0.974223361896082,SVC,0.5546218487394958
+TCS.NS,Tata Consultancy Services,Linear_Regression,0.9839481822608924,Random_Forest_Classifier,0.5126050420168067
+HDFCBANK.NS,HDFC Bank Ltd.,Linear_Regression,0.9782146367284653,XGBoost_Classifier,0.5168067226890757
+ICICIBANK.NS,ICICI Bank Ltd.,Linear_Regression,0.9669953314787166,LightGBM_Classifier,0.5294117647058824
+BHARTIARTL.NS,Bharti Airtel Ltd.,Linear_Regression,0.9801147704179005,Logistic_Regression,0.542016806722689
+SBIN.NS,State Bank of India,Linear_Regression,0.9825023538461353,SVC,0.5210084033613446
+INFY.NS,Infosys Ltd.,Linear_Regression,0.9707594640572615,Logistic_Regression,0.5
+LICI.NS,Life Insurance Corp,Linear_Regression,0.9462082237799623,LightGBM_Classifier,0.5625
+HINDUNILVR.NS,Hindustan Unilever Ltd.,Linear_Regression,0.9554571716300793,SVC,0.5630252100840336
+ITC.NS,ITC Ltd.,Linear_Regression,0.8975845940853447,Random_Forest_Classifier,0.5126050420168067
+LT.NS,Larsen & Toubro Ltd.,Linear_Regression,0.9580779268364332,Logistic_Regression,0.47058823529411764
+HCLTECH.NS,HCL Technologies Ltd.,Linear_Regression,0.9563776637269372,Logistic_Regression,0.542016806722689
+BAJFINANCE.NS,Bajaj Finance Ltd.,Linear_Regression,0.9719541060148031,SVC,0.5294117647058824
+SUNPHARMA.NS,Sun Pharmaceutical Ind.,Linear_Regression,0.8980244933087458,SVC,0.5714285714285714
+M&M.NS,Mahindra & Mahindra Ltd.,Linear_Regression,0.9732788097212688,SVC,0.542016806722689
+MARUTI.NS,Maruti Suzuki India Ltd.,Linear_Regression,0.9901304291198766,XGBoost_Classifier,0.5294117647058824
+KOTAKBANK.NS,Kotak Mahindra Bank Ltd.,Linear_Regression,0.9351679576187089,Random_Forest_Classifier,0.5504201680672269
+AXISBANK.NS,Axis Bank Ltd.,Linear_Regression,0.9680662123290917,LightGBM_Classifier,0.5042016806722689
+ULTRACEMCO.NS,UltraTech Cement Ltd.,Linear_Regression,0.942049963874379,Random_Forest_Classifier,0.5252100840336135
+TATAMOTORS.NS,Tata Motors Ltd.,Linear_Regression,0.9620570285827971,Logistic_Regression,0.5546218487394958
+ONGC.NS,Oil & Natural Gas Corp,Linear_Regression,0.816585490058309,Logistic_Regression,0.5252100840336135
+NTPC.NS,NTPC Ltd.,Linear_Regression,0.8672396113988601,XGBoost_Classifier,0.5210084033613446
+TITAN.NS,Titan Company Ltd.,Linear_Regression,0.9581148037494877,Random_Forest_Classifier,0.49159663865546216
+ADANIENT.NS,Adani Enterprises Ltd.,Linear_Regression,0.8654595686505535,XGBoost_Classifier,0.47058823529411764
+COALINDIA.NS,Coal India Ltd.,Linear_Regression,0.8520321349144057,Random_Forest_Classifier,0.5546218487394958
