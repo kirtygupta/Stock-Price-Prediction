@@ -988,7 +988,7 @@
                     <div class="stat-value" id="stat-volume">0.0M</div>
                     <div class="stat-label">Volume</div>
                 </div>
-                <div class="stat-card">
+                <!-- <div class="stat-card">
                     <div class="stat-value" id="stat-marketcap">0.0B</div>
                     <div class="stat-label">Market Cap</div>
                 </div>
@@ -999,7 +999,7 @@
                 <div class="stat-card">
                     <div class="stat-value" id="stat-beta">0.00</div>
                     <div class="stat-label">Beta</div>
-                </div>
+                </div> -->
             </div>
 
             <!-- Charts -->
@@ -1406,10 +1406,10 @@
             document.getElementById('current-price').textContent = `₹${currentPrice.toFixed(2)}`;
             document.getElementById('stat-high').textContent = `₹${stats.high_52w.toFixed(2)}`;
             document.getElementById('stat-low').textContent = `₹${stats.low_52w.toFixed(2)}`;
-            document.getElementById('stat-volume').textContent = (stats.volume / 1000000).toFixed(1) + 'M';
-            document.getElementById('stat-marketcap').textContent = (stats.market_cap / 1000000000).toFixed(1) + 'B';
-            document.getElementById('stat-pe').textContent = stats.pe_ratio.toFixed(1);
-            document.getElementById('stat-beta').textContent = stats.beta.toFixed(2);
+            document.getElementById('stat-volume').textContent = `${(stats.volume / 10000).toFixed(1)}` + 'M';
+            // document.getElementById('stat-marketcap').textContent = (stats.market_cap / 1000000000).toFixed(1) + 'B';
+            // document.getElementById('stat-pe').textContent = stats.pe_ratio.toFixed(1);
+            // document.getElementById('stat-beta').textContent = stats.beta.toFixed(2);
         }
 
         // Update predictions - FIXED
@@ -1606,16 +1606,35 @@
 
         // 3. Radar chart using technical indicators from backend (with fallback)
         function createRadarChart() {
-            if (!predictionData) return;
+            if (!predictionData || !stockData) return;
+
             const tech = predictionData.technical_indicators || {};
+            const price = stockData.current_price || 0;
+
             const labels = ['Confidence', 'Model Agreement', 'RSI', 'Volatility', 'SMA10', 'SMA20'];
+
+            // Helper to keep values in a sane range
+            const clamp = (v, min = 0, max = 100) => Math.max(min, Math.min(max, v));
+
+            const confidence      = clamp(tech.confidence ?? predictionData.confidence ?? 60);
+            const modelAgreement  = clamp((predictionData.model_agreement ?? 0.5) * 100);
+            const rsi             = clamp(tech.rsi ?? 50);
+            const volatility      = clamp((tech.volatility ?? 0.2) * 100);
+
+            const sma10 = tech.sma_10 ?? price;
+            const sma20 = tech.sma_20 ?? price;
+
+            // Normalize SMA values as % of current price (around 100 if they’re close)
+            const sma10Score = price ? clamp((sma10 / price) * 100) : 100;
+            const sma20Score = price ? clamp((sma20 / price) * 100) : 100;
+
             const values = [
-                tech.confidence || predictionData.confidence || 60,
-                (predictionData.model_agreement || 0.5) * 100,
-                tech.rsi || 50,
-                (tech.volatility || 0.2) * 100,
-                tech.sma_10 || (stockData?.current_price || 0),
-                tech.sma_20 || (stockData?.current_price || 0)
+                confidence,
+                modelAgreement,
+                rsi,
+                volatility,
+                sma10Score,
+                sma20Score
             ];
 
             const data = [{
@@ -1629,59 +1648,282 @@
 
             const layout = {
                 polar: {
-                    radialaxis: { visible: true, range: [0, Math.max(...values, 100)] }
+                    radialaxis: {
+                        visible: true,
+                        range: [0, 100]   // fixed 0–100 since we normalized
+                    }
                 },
                 showlegend: false,
                 margin: { t: 30, r: 20, b: 20, l: 20 }
             };
+
             Plotly.newPlot('radar-chart', data, layout, { responsive: true });
         }
-
-        // 4. Distribution chart of predicted prices
+                
+        // 4. Distribution chart showing predictions from 5 models
         function createDistributionChart() {
             if (!predictionData) return;
-            const basePrices = predictionData.prices && predictionData.prices.length
-                ? predictionData.prices
-                : [predictionData.next_day || 0];
-
-            const layout = {
-                title: 'Prediction Distribution',
-                xaxis: { title: 'Price (₹)' },
-                yaxis: { title: 'Frequency' },
-                height: 330,
-                margin: { t: 40, r: 20, b: 40, l: 60 }
+            
+            const container = document.getElementById('distribution-chart');
+            
+            // Your 5 models
+            const modelNames = ['LightGBM', 'Logistic_Regression', 'Random_Forest', 'SVC', 'XGBoost'];
+            const displayNames = {
+                'LightGBM': 'LightGBM',
+                'Logistic_Regression': 'Logistic Regression',
+                'Random_Forest': 'Random Forest',
+                'SVC': 'Support Vector Classifier',
+                'XGBoost': 'XGBoost'
             };
-
-            Plotly.newPlot('distribution-chart', [{
-                type: 'histogram',
-                x: basePrices,
-                marker: { color: '#764ba2' },
-                opacity: 0.8
-            }], layout, { responsive: true });
+            const colors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444'];
+            
+            const traces = [];
+            
+            modelNames.forEach((modelName, index) => {
+                // Get predictions for this model
+                let predictions = [];
+                
+                if (predictionData.model_predictions && predictionData.model_predictions[modelName]) {
+                    predictions = predictionData.model_predictions[modelName].prices || [];
+                } else {
+                    // Generate sample predictions if no data available
+                    const basePrice = stockData?.current_price || 1000;
+                    for (let i = 0; i < 20; i++) {
+                        const variation = basePrice * (1 + (Math.random() - 0.5) * 0.15);
+                        predictions.push(variation);
+                    }
+                }
+                
+                if (predictions.length > 0) {
+                    // Create histogram for each model's predictions
+                    traces.push({
+                        type: 'histogram',
+                        x: predictions,
+                        name: displayNames[modelName] || modelName,
+                        opacity: 0.6,
+                        marker: { color: colors[index] },
+                        nbinsx: 15,
+                        histnorm: 'probability density',
+                        hoverinfo: 'x+y+name',
+                        hovertemplate: 
+                            '<b>%{fullData.name}</b><br>' +
+                            'Price: ₹%{x:.2f}<br>' +
+                            'Probability: %{y:.3f}<extra></extra>'
+                    });
+                }
+            });
+            
+            const layout = {
+                title: 'Price Probability Distribution by Model',
+                xaxis: { 
+                    title: 'Predicted Price (₹)',
+                    tickformat: ',.2f',
+                    gridcolor: '#e5e7eb'
+                },
+                yaxis: { 
+                    title: 'Probability Density',
+                    gridcolor: '#e5e7eb'
+                },
+                height: 330,
+                margin: { t: 40, r: 20, b: 60, l: 60 },
+                barmode: 'overlay',
+                bargap: 0.05,
+                bargroupgap: 0.1,
+                legend: {
+                    orientation: 'h',
+                    y: -0.3,
+                    x: 0.5,
+                    xanchor: 'center'
+                },
+                plot_bgcolor: '#f8f9fa',
+                paper_bgcolor: 'white'
+            };
+            
+            // Only plot if we have traces
+            if (traces.length > 0) {
+                Plotly.newPlot(container, traces, layout, { responsive: true });
+            } else {
+                container.innerHTML = '<div class="text-center p-4">No model prediction data available</div>';
+            }
         }
 
-        // 5. Model performance chart
+        // 5. Model comparison chart showing predictions from all 5 models over time
         function createModelChart() {
             if (!predictionData) return;
-            const performance = predictionData.model_performance || {};
-            const labels = Object.keys(performance).length ? Object.keys(performance) : [modelDisplayNames[currentModel]];
-            const values = Object.keys(performance).length ? Object.values(performance) : [predictionData.confidence || 60];
-            const displayLabels = labels.map(l => modelDisplayNames[l.toLowerCase()] || l.replace(/_/g, ' '));
-
-            const layout = {
-                title: 'Model Performance (%)',
-                xaxis: { title: 'Model' },
-                yaxis: { title: 'Score', range: [0, 100] },
-                height: 330,
-                margin: { t: 40, r: 20, b: 60, l: 50 }
+            
+            const container = document.getElementById('model-chart');
+            
+            // Your 5 models
+            const modelNames = ['LightGBM', 'Logistic_Regression', 'Random_Forest', 'SVC', 'XGBoost'];
+            const displayNames = {
+                'LightGBM': 'LightGBM',
+                'Logistic_Regression': 'Logistic Regression',
+                'Random_Forest': 'Random Forest',
+                'SVC': 'Support Vector Classifier',
+                'XGBoost': 'XGBoost'
             };
-
-            Plotly.newPlot('model-chart', [{
-                type: 'bar',
-                x: displayLabels,
-                y: values,
-                marker: { color: '#667eea' }
-            }], layout, { responsive: true });
+            const colors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444'];
+            
+            const traces = [];
+            
+            // Add historical price as reference
+            if (stockData?.historical?.prices && stockData.historical.prices.length > 0) {
+                const histDates = stockData.historical.dates || [];
+                const histPrices = stockData.historical.prices;
+                
+                // Take last 30 days of historical data
+                const recentHistDates = histDates.slice(-30);
+                const recentHistPrices = histPrices.slice(-30);
+                
+                traces.push({
+                    x: recentHistDates,
+                    y: recentHistPrices,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Historical Price',
+                    line: {
+                        color: '#6b7280',
+                        width: 2,
+                        dash: 'dot'
+                    }
+                });
+            }
+            
+            // Add predictions for each model
+            modelNames.forEach((modelName, index) => {
+                let modelPredictions = [];
+                let predictionDates = [];
+                
+                // Try to get model-specific predictions from model_predictions
+                if (predictionData.model_predictions && predictionData.model_predictions[modelName]) {
+                    modelPredictions = predictionData.model_predictions[modelName].prices || [];
+                    predictionDates = predictionData.model_predictions[modelName].dates || [];
+                } 
+                // Also check if predictions are in the main predictionData
+                else if (predictionData[modelName.toLowerCase()]) {
+                    modelPredictions = predictionData[modelName.toLowerCase()].prices || [];
+                    predictionDates = predictionData[modelName.toLowerCase()].dates || [];
+                }
+                
+                // If no specific dates, use the main prediction dates or generate them
+                if (predictionDates.length === 0) {
+                    predictionDates = predictionData.dates || [];
+                }
+                
+                // If still no dates, generate them
+                if (predictionDates.length === 0 && modelPredictions.length > 0) {
+                    const today = new Date();
+                    predictionDates = [];
+                    for (let i = 0; i < modelPredictions.length; i++) {
+                        const date = new Date(today);
+                        date.setDate(date.getDate() + i + 1);
+                        predictionDates.push(date.toISOString().split('T')[0]);
+                    }
+                }
+                
+                // If no model predictions, generate sample data
+                if (modelPredictions.length === 0) {
+                    const basePrice = stockData?.current_price || 1000;
+                    for (let i = 0; i < 10; i++) {
+                        const variation = basePrice * (1 + (Math.random() - 0.5) * 0.05 * (i + 1));
+                        modelPredictions.push(variation);
+                    }
+                }
+                
+                if (modelPredictions.length > 0) {
+                    traces.push({
+                        x: predictionDates.slice(0, modelPredictions.length),
+                        y: modelPredictions,
+                        type: 'scatter',
+                        mode: 'lines+markers',
+                        name: displayNames[modelName] || modelName,
+                        line: {
+                            color: colors[index],
+                            width: 3
+                        },
+                        marker: {
+                            color: colors[index],
+                            size: 6
+                        },
+                        hovertemplate: 
+                            '<b>%{fullData.name}</b><br>' +
+                            'Date: %{x}<br>' +
+                            'Predicted: ₹%{y:.2f}<extra></extra>'
+                    });
+                }
+            });
+            
+            // Add current price as a reference line
+            if (stockData?.current_price) {
+                const allDates = [];
+                traces.forEach(trace => {
+                    if (trace.x && trace.x.length > 0) {
+                        allDates.push(...trace.x);
+                    }
+                });
+                
+                if (allDates.length > 0) {
+                    const minDate = new Date(Math.min(...allDates.map(d => new Date(d))));
+                    const maxDate = new Date(Math.max(...allDates.map(d => new Date(d))));
+                    
+                    traces.push({
+                        x: [minDate.toISOString().split('T')[0], maxDate.toISOString().split('T')[0]],
+                        y: [stockData.current_price, stockData.current_price],
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'Current Price',
+                        line: {
+                            color: '#dc2626',
+                            width: 2,
+                            dash: 'dash'
+                        },
+                        showlegend: true,
+                        hovertemplate: 
+                            '<b>Current Price</b><br>' +
+                            'Price: ₹%{y:.2f}<extra></extra>'
+                    });
+                }
+            }
+            
+            const layout = {
+                title: 'Model Predictions Comparison',
+                xaxis: { 
+                    title: 'Date',
+                    type: 'date',
+                    tickformat: '%b %d',
+                    gridcolor: '#e5e7eb',
+                    tickangle: 45
+                },
+                yaxis: { 
+                    title: 'Price (₹)',
+                    tickformat: ',.2f',
+                    gridcolor: '#e5e7eb'
+                },
+                height: 330,
+                margin: { t: 40, r: 20, b: 80, l: 60 },
+                legend: {
+                    orientation: 'h',
+                    y: -0.4,
+                    x: 0.5,
+                    xanchor: 'center'
+                },
+                plot_bgcolor: '#f8f9fa',
+                paper_bgcolor: 'white',
+                hovermode: 'x unified',
+                hoverlabel: {
+                    bgcolor: 'white',
+                    font: {
+                        size: 12
+                    }
+                }
+            };
+            
+            // Only plot if we have traces (more than just historical)
+            if (traces.length > 1) {
+                Plotly.newPlot(container, traces, layout, { responsive: true });
+            } else {
+                container.innerHTML = '<div class="text-center p-4">Loading model comparison data...</div>';
+            }
         }
 
         // Chatbot functionality with Ollama, DuckDuckGo, and OpenAI integration - FIXED

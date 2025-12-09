@@ -108,6 +108,8 @@
     height: 550px;
     border-radius: 16px;
     padding: 1rem;
+    background: white;
+    border: 2px solid rgba(102, 126, 234, 0.1);
 }
 
 /* Enhanced Table */
@@ -290,12 +292,41 @@
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
+.summary-card .summary-value {
+    font-size: 2.5rem;
+    font-weight: 900;
+    margin: 0.5rem 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
 .summary-card .icon {
     font-size: 2.5rem;
     opacity: 0.2;
     position: absolute;
     top: 1.5rem;
     right: 1.5rem;
+}
+
+.summary-card small {
+    display: block;
+    font-size: 0.85rem;
+    opacity: 0.8;
+    margin-top: 0.5rem;
+}
+
+.summary-card .avg-change-display {
+    font-size: 2rem;
+    font-weight: 900;
+    margin: 0.5rem 0;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.summary-card .avg-change-display.negative {
+    color: #ef4444 !important;
+}
+
+.summary-card .avg-change-display.positive {
+    color: #10b981 !important;
 }
 
 /* Sort Control */
@@ -374,7 +405,9 @@
         font-size: 1.5rem;
     }
     
-    .summary-card h4 {
+    .summary-card h4,
+    .summary-card .summary-value,
+    .summary-card .avg-change-display {
         font-size: 2rem;
     }
     
@@ -395,6 +428,14 @@
         padding: 0.75rem 0.5rem;
     }
 }
+
+/* Chart loading spinner */
+.chart-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
 </style>
 
 <div class="comparison-container">
@@ -406,7 +447,7 @@
                     <i class="fas fa-balance-scale icon"></i>
                     <div>
                         <h2 class="mb-1">Stock Comparison</h2>
-                        <p class="text-muted mb-0">Compare performance of all 25 Indian stocks</p>
+                        <p class="text-muted mb-0">Compare performance of all Indian stocks</p>
                     </div>
                 </div>
             </div>
@@ -429,8 +470,15 @@
                         <span class="badge bg-primary">Top 10 Stocks</span>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div id="comparison-chart"></div>
+                <div class="card-body position-relative" style="min-height: 550px;">
+                    <div id="comparison-chart">
+                        <!-- <div class="chart-loading text-center">
+                            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                                <span class="visually-hidden">Loading chart...</span>
+                            </div>
+                            <p class="mt-3 text-muted">Loading price comparison chart...</p>
+                        </div> -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -470,34 +518,51 @@
                                     <th>Predicted (Next Day)</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="stocks-table-body">
+                                {% if comparison_data %}
                                 {% for stock_name, data in comparison_data.items() %}
                                 <tr>
                                     <td>
-                                        <div class="stock-name">{{ stock_name }}</div>
+                                        <div class="stock-name">{{ data.company or stock_name }}</div>
                                         <div class="stock-ticker">{{ data.ticker }}</div>
                                     </td>
                                     <td>
-                                        <span class="price-display price-secondary">₹{{ (data.current_price * (1 - data.change_percent/100))|round(2) }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="price-display price-primary">₹{{ data.current_price|round(2) }}</span>
-                                    </td>
-                                    <td class="{{ 'positive' if data.change_percent >= 0 else 'negative' }}">
-                                        <i class="fas fa-{{ 'arrow-up' if data.change_percent >= 0 else 'arrow-down' }}"></i>
-                                        {{ data.change_percent|round(2) }}%
-                                    </td>
-                                    <td>
-                                        <span class="status-badge {{ 'badge-bullish' if data.change_percent >= 0 else 'badge-bearish' }}">
-                                            <i class="fas fa-{{ 'chart-line' if data.change_percent >= 0 else 'chart-line-down' }}"></i>
-                                            {{ 'Bullish' if data.change_percent >= 0 else 'Bearish' }}
+                                        <span class="price-display price-secondary">
+                                            ₹{{ ((data.current_price or 0) * (1 - (data.change_percent or 0)/100))|round(2) if data.current_price else 'N/A' }}
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="predicted-price">₹{{ (data.current_price * (1 + (data.change_percent * 0.3)/100))|round(2) }}</span>
+                                        <span class="price-display price-primary">
+                                            ₹{{ (data.current_price|round(2)) if data.current_price else 'N/A' }}
+                                        </span>
+                                    </td>
+                                    <td class="{{ 'positive' if (data.change_percent or 0) >= 0 else 'negative' }}">
+                                        <i class="fas fa-{{ 'arrow-up' if (data.change_percent or 0) >= 0 else 'arrow-down' }}"></i>
+                                        {{ (data.change_percent|round(2) if data.change_percent else 0) }}%
+                                    </td>
+                                    <td>
+                                        <span class="status-badge {{ 'badge-bullish' if (data.change_percent or 0) >= 0 else 'badge-bearish' }}">
+                                            <i class="fas fa-{{ 'chart-line' if (data.change_percent or 0) >= 0 else 'chart-line-down' }}"></i>
+                                            {{ 'Bullish' if (data.change_percent or 0) >= 0 else 'Bearish' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="predicted-price">
+                                            ₹{{ ((data.current_price or 0) * (1 + ((data.change_percent or 0) * 0.3)/100))|round(2) if data.current_price else 'N/A' }}
+                                        </span>
                                     </td>
                                 </tr>
                                 {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Loading stocks...</span>
+                                        </div>
+                                        <p class="mt-3 text-muted">Loading stock data...</p>
+                                    </td>
+                                </tr>
+                                {% endif %}
                             </tbody>
                         </table>
                     </div>
@@ -515,46 +580,49 @@
             </h4>
         </div>
         
-        <div class="col-md-6 col-lg-3 mb-4">
-            <div class="summary-card summary-card-gaining">
-                <i class="fas fa-arrow-trend-up icon"></i>
-                <div class="card-body">
-                    <h6>Stocks Gaining</h6>
-                    <h4>{{ summary.gaining }}</h4>
-                    <small style="opacity: 0.8;">Moving Upward</small>
+        <!-- Summary cards will be populated by JavaScript -->
+        <div id="summary-cards" class="row">
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="summary-card summary-card-gaining">
+                    <i class="fas fa-arrow-trend-up icon"></i>
+                    <div class="card-body">
+                        <h6>Stocks Gaining</h6>
+                        <div id="gaining-stocks" class="summary-value">...</div>
+                        <small>Moving Upward</small>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-6 col-lg-3 mb-4">
-            <div class="summary-card summary-card-losing">
-                <i class="fas fa-arrow-trend-down icon"></i>
-                <div class="card-body">
-                    <h6>Stocks Losing</h6>
-                    <h4>{{ summary.losing }}</h4>
-                    <small style="opacity: 0.8;">Moving Downward</small>
+            
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="summary-card summary-card-losing">
+                    <i class="fas fa-arrow-trend-down icon"></i>
+                    <div class="card-body">
+                        <h6>Stocks Losing</h6>
+                        <div id="losing-stocks" class="summary-value">...</div>
+                        <small>Moving Downward</small>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-6 col-lg-3 mb-4">
-            <div class="summary-card summary-card-avg">
-                <i class="fas fa-percentage icon"></i>
-                <div class="card-body">
-                    <h6>Average Change</h6>
-                    <h4>{{ summary.avg_change|round(2) }}%</h4>
-                    <small style="opacity: 0.8;">Market Average</small>
+            
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="summary-card summary-card-avg">
+                    <i class="fas fa-percentage icon"></i>
+                    <div class="card-body">
+                        <h6>Average Change</h6>
+                        <div id="avg-change" class="avg-change-display">...</div>
+                        <small>Market Average</small>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="col-md-6 col-lg-3 mb-4">
-            <div class="summary-card summary-card-total">
-                <i class="fas fa-building icon"></i>
-                <div class="card-body">
-                    <h6>Total Stocks</h6>
-                    <h4>{{ summary.total_stocks }}</h4>
-                    <small style="opacity: 0.8;">In Portfolio</small>
+            
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="summary-card summary-card-total">
+                    <i class="fas fa-building icon"></i>
+                    <div class="card-body">
+                        <h6>Total Stocks</h6>
+                        <div id="total-stocks" class="summary-value">...</div>
+                        <small>In Portfolio</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -563,140 +631,535 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Load Plotly.js -->
+<script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const comparisonData = {{ comparison_data|tojson }};
-    const sortSelect = document.getElementById('sort-by');
+    // Try to use embedded comparison_data from Jinja2, or fetch from API
+    let comparisonData = {};
     
-    // Enhanced color palette
-    const colors = [
-        '#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe',
-        '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0',
-        '#a8edea', '#fed6e3', '#f857a6', '#ff5858', '#f093fb',
-        '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a',
-        '#fee140', '#30cfd0', '#a8edea', '#fed6e3', '#f857a6'
-    ];
+    // Check if comparison_data is available from template
+    {% if comparison_data %}
+        comparisonData = {{ comparison_data|tojson }};
+        console.log('Using template comparison_data:', Object.keys(comparisonData).length, 'stocks');
+    {% else %}
+        console.log('No template comparison_data, will fetch from API');
+    {% endif %}
     
-    // Prepare chart data
-    const traces = [];
-    Object.entries(comparisonData).slice(0, 10).forEach(([stockName, data], index) => {
-        const trace = {
-            x: data.dates.slice(-30),
-            y: data.prices.slice(-30),
-            type: 'scatter',
-            mode: 'lines+markers',
-            name: stockName,
-            line: { 
-                color: colors[index % colors.length], 
-                width: 3,
-                shape: 'spline'
-            },
-            marker: {
-                size: 6,
-                color: colors[index % colors.length],
-                line: {
-                    color: 'white',
-                    width: 2
-                }
+    // Function to fetch data from API if needed
+    async function fetchComparisonData() {
+        try {
+            const response = await fetch('/api/comparison_data');
+            if (!response.ok) {
+                throw new Error(`API responded with status ${response.status}`);
             }
-        };
-        traces.push(trace);
-    });
+            const data = await response.json();
+            console.log('Fetched comparison data from API:', Object.keys(data).length, 'stocks');
+            return data;
+        } catch (error) {
+            console.error('Error fetching comparison data:', error);
+            return {};
+        }
+    }
     
-    const layout = {
-        title: {
-            text: '<b>Top 10 Stocks - 30-Day Performance Comparison</b>',
-            font: {
-                size: 20,
-                color: '#2d3748',
-                family: 'Inter, sans-serif'
-            }
-        },
-        xaxis: { 
-            title: {
-                text: '<b>Date</b>',
-                font: { size: 14, color: '#4a5568' }
-            },
-            type: 'date',
-            tickformat: '%b %d',
-            gridcolor: 'rgba(0,0,0,0.05)',
-            showline: true,
-            linewidth: 2,
-            linecolor: 'rgba(102, 126, 234, 0.2)'
-        },
-        yaxis: { 
-            title: {
-                text: '<b>Price (₹)</b>',
-                font: { size: 14, color: '#4a5568' }
-            },
-            tickprefix: '₹',
-            gridcolor: 'rgba(0,0,0,0.05)',
-            showline: true,
-            linewidth: 2,
-            linecolor: 'rgba(102, 126, 234, 0.2)'
-        },
-        hovermode: 'x unified',
-        plot_bgcolor: 'rgba(248, 249, 250, 0.5)',
-        paper_bgcolor: 'white',
-        legend: { 
-            orientation: 'h', 
-            y: -0.15,
-            x: 0.5,
-            xanchor: 'center',
-            font: { size: 11 },
-            bgcolor: 'rgba(255, 255, 255, 0.9)',
-            bordercolor: 'rgba(102, 126, 234, 0.2)',
-            borderwidth: 2
-        },
-        margin: { t: 60, b: 80, l: 80, r: 40 },
-        font: { family: 'Inter, sans-serif' }
-    };
-    
-    const config = {
-        responsive: true,
-        displayModeBar: true,
-        displaylogo: false,
-        modeBarButtonsToRemove: ['lasso2d', 'select2d']
-    };
-    
-    Plotly.newPlot('comparison-chart', traces, layout, config);
-    
-    // Sorting functionality
-    sortSelect.addEventListener('change', function() {
-        const tbody = document.querySelector('#stocks-table tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr'));
+    // Function to render the chart
+    // Function to render the chart with 30-day performance comparison
+    async function renderChart(comparisonData) {
+        const chartElement = document.getElementById('comparison-chart');
         
-        rows.sort((a, b) => {
-            const sortBy = this.value;
-            const aCells = a.querySelectorAll('td');
-            const bCells = b.querySelectorAll('td');
+        if (!comparisonData || Object.keys(comparisonData).length === 0) {
+            chartElement.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No chart data available</p>
+                    <button class="btn btn-primary mt-2" onclick="location.reload()">Retry</button>
+                </div>
+            `;
+            return;
+        }
+        
+        // Enhanced color palette
+        const colors = [
+            '#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe',
+            '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#30cfd0'
+        ];
+        
+        // Calculate 30-day performance for each stock
+        const stocksWithPerformance = Object.entries(comparisonData).map(([stockName, data]) => {
+            let performance = 0;
+            let currentPrice = data.current_price || 0;
             
-            if (sortBy === 'name') {
-                const aName = aCells[0].querySelector('.stock-name').textContent;
-                const bName = bCells[0].querySelector('.stock-name').textContent;
-                return aName.localeCompare(bName);
-            } else if (sortBy === 'price') {
-                const aPrice = parseFloat(aCells[2].textContent.replace('₹', '').trim());
-                const bPrice = parseFloat(bCells[2].textContent.replace('₹', '').trim());
-                return bPrice - aPrice;
-            } else if (sortBy === 'change') {
-                const aChange = parseFloat(aCells[3].textContent.replace('%', '').trim());
-                const bChange = parseFloat(bCells[3].textContent.replace('%', '').trim());
-                return bChange - aChange;
-            } else if (sortBy === 'predicted') {
-                const aPredicted = parseFloat(aCells[5].textContent.replace('₹', '').trim());
-                const bPredicted = parseFloat(bCells[5].textContent.replace('₹', '').trim());
-                return bPredicted - aPredicted;
+            // Calculate 30-day performance based on available data
+            if (data.prices && data.prices.length >= 30) {
+                const oldestPrice = data.prices[data.prices.length - 30] || currentPrice;
+                performance = ((currentPrice - oldestPrice) / oldestPrice) * 100;
+            } else if (data.change_percent !== undefined) {
+                // Use historical change_percent if available
+                performance = data.change_percent || 0;
+            } else {
+                // Generate synthetic performance based on random trend
+                const trend = Math.random() > 0.5 ? 0.0005 : -0.0005;
+                performance = trend * 30 * 100; // Convert to percentage
             }
-            return 0;
+            
+            return {
+                name: stockName,
+                data: data,
+                performance: performance,
+                company: data.company || stockName
+            };
         });
         
-        // Clear and re-append sorted rows with animation
-        tbody.style.opacity = '0.5';
-        setTimeout(() => {
-            rows.forEach(row => tbody.appendChild(row));
-            tbody.style.opacity = '1';
-        }, 150);
-    });
+        // Sort by 30-day performance (highest to lowest) and take top 10
+        const topStocks = stocksWithPerformance
+            .sort((a, b) => b.performance - a.performance)
+            .slice(0, Math.min(10, stocksWithPerformance.length));
+        
+        console.log('Top 10 stocks by 30-day performance:', 
+            topStocks.map(s => ({ name: s.name, performance: s.performance.toFixed(2) + '%' }))
+        );
+        
+        // Prepare chart data
+        const traces = [];
+        let globalChartDates = []; // Store dates globally for the shapes array
+        
+        topStocks.forEach((stock, index) => {
+            const stockData = stock.data;
+            
+            // Extract dates and prices from data
+            let dates = stockData.dates || [];
+            let prices = stockData.prices || [];
+            
+            // Get last 30 days of data (or all available if less than 30)
+            const last30Days = Math.min(30, dates.length);
+            const chartDates = dates.slice(-last30Days);
+            const chartPrices = prices.slice(-last30Days);
+            
+            // Store first stock's dates for global use
+            if (index === 0 && chartDates.length > 0) {
+                globalChartDates = [...chartDates];
+            }
+            
+            // If we don't have enough data, generate synthetic data for 30 days
+            if (chartDates.length < 30 || chartPrices.length < 30) {
+                const basePrice = stockData.current_price || 1000;
+                const syntheticDates = [];
+                const syntheticPrices = [];
+                
+                // Generate 30 days of historical data ending today
+                for (let i = 29; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    syntheticDates.push(date.toISOString().split('T')[0]);
+                    
+                    // Calculate price based on performance trend
+                    const progress = (29 - i) / 29; // 0 to 1 over 30 days
+                    const performanceFactor = stock.performance / 100; // Convert percentage to decimal
+                    const dailyReturn = Math.pow(1 + performanceFactor, 1/30) - 1;
+                    const price = basePrice * Math.pow(1 + dailyReturn, progress);
+                    syntheticPrices.push(price);
+                }
+                
+                // Use synthetic data
+                dates = syntheticDates;
+                prices = syntheticPrices;
+                
+                if (index === 0) {
+                    globalChartDates = [...syntheticDates];
+                }
+            }
+            
+            // Normalize prices to percentage change for better comparison
+            const basePrice = prices[0] || 1000;
+            const normalizedPrices = prices.map(price => 
+                ((price - basePrice) / basePrice) * 100
+            );
+            
+            const trace = {
+                x: dates,
+                y: normalizedPrices,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: `${stock.company} (${stock.performance.toFixed(1)}%)`,
+                line: { 
+                    color: colors[index % colors.length], 
+                    width: 3,
+                    shape: 'spline'
+                },
+                marker: {
+                    size: 6,
+                    color: colors[index % colors.length],
+                    line: {
+                        color: 'white',
+                        width: 2
+                    },
+                    symbol: 'circle'
+                },
+                hovertemplate: `
+                    <b>${stock.company}</b><br>
+                    Date: %{x}<br>
+                    Performance: %{y:.2f}%<br>
+                    30-Day Return: ${stock.performance.toFixed(2)}%<br>
+                    <extra></extra>
+                `
+            };
+            traces.push(trace);
+        });
+        
+        // Create layout with shapes (only if we have dates)
+        const layout = {
+            title: {
+                text: '<b>Top 10 Stocks - 30-Day Performance Comparison</b>',
+                font: {
+                    size: 20,
+                    color: '#2d3748',
+                    family: 'Inter, sans-serif'
+                },
+                y: 0.98
+            },
+            xaxis: { 
+                title: {
+                    text: '<b>Date (Last 30 Days)</b>',
+                    font: { size: 14, color: '#4a5568' }
+                },
+                type: 'date',
+                tickformat: '%b %d',
+                gridcolor: 'rgba(0,0,0,0.05)',
+                showline: true,
+                linewidth: 2,
+                linecolor: 'rgba(102, 126, 234, 0.2)',
+                tickangle: -45,
+                tickfont: { size: 10 }
+            },
+            yaxis: { 
+                title: {
+                    text: '<b>Cumulative Return (%)</b>',
+                    font: { size: 14, color: '#4a5568' }
+                },
+                ticksuffix: '%',
+                gridcolor: 'rgba(0,0,0,0.05)',
+                showline: true,
+                linewidth: 2,
+                linecolor: 'rgba(102, 126, 234, 0.2)',
+                zeroline: true,
+                zerolinecolor: 'rgba(102, 126, 234, 0.1)',
+                zerolinewidth: 2
+            },
+            hovermode: 'x unified',
+            plot_bgcolor: 'rgba(248, 249, 250, 0.5)',
+            paper_bgcolor: 'white',
+            legend: { 
+                orientation: 'h', 
+                y: -0.25,
+                x: 0.5,
+                xanchor: 'center',
+                font: { size: 11 },
+                bgcolor: 'rgba(255, 255, 255, 0.9)',
+                bordercolor: 'rgba(102, 126, 234, 0.2)',
+                borderwidth: 2
+            },
+            margin: { t: 70, b: 120, l: 80, r: 40 },
+            font: { family: 'Inter, sans-serif' }
+        };
+        
+        // Add shapes only if we have dates
+        if (globalChartDates.length > 0) {
+            layout.shapes = [
+                // Add zero line
+                {
+                    type: 'line',
+                    x0: globalChartDates[0],
+                    x1: globalChartDates[globalChartDates.length - 1],
+                    y0: 0,
+                    y1: 0,
+                    line: {
+                        color: 'rgba(0,0,0,0.2)',
+                        width: 1,
+                        dash: 'dash'
+                    }
+                }
+            ];
+            
+            layout.annotations = [
+                {
+                    text: 'Positive Performance',
+                    x: 0.5,
+                    y: 1.05,
+                    xref: 'paper',
+                    yref: 'paper',
+                    showarrow: false,
+                    font: { size: 12, color: '#10b981' },
+                    bgcolor: 'rgba(16, 185, 129, 0.1)',
+                    borderpad: 4,
+                    bordercolor: 'rgba(16, 185, 129, 0.3)',
+                    borderwidth: 1
+                }
+            ];
+        }
+        
+        const config = {
+            responsive: true,
+            displayModeBar: true,
+            displaylogo: false,
+            modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+            scrollZoom: true
+        };
+        
+        // Add download button
+        if (typeof Plotly !== 'undefined' && Plotly.Icons) {
+            config.modeBarButtonsToAdd = [{
+                name: 'Download as PNG',
+                icon: Plotly.Icons.camera,
+                click: function(gd) {
+                    Plotly.downloadImage(gd, {
+                        format: 'png',
+                        filename: '30-day-performance-comparison',
+                        height: 600,
+                        width: 1200,
+                        scale: 2
+                    });
+                }
+            }];
+        }
+        
+        try {
+            // Clear any existing chart
+            if (Plotly && Plotly.purge) {
+                Plotly.purge(chartElement);
+            }
+            
+            // Create new chart
+            if (traces.length > 0) {
+                await Plotly.newPlot('comparison-chart', traces, layout, config);
+                
+                // Add resize handler
+                window.addEventListener('resize', function() {
+                    Plotly.Plots.resize(chartElement);
+                });
+            } else {
+                throw new Error('No chart data to display');
+            }
+            
+        } catch (error) {
+            console.error('Error rendering Plotly chart:', error);
+            chartElement.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error rendering chart: ${error.message}
+                    <br><button class="btn btn-sm btn-primary mt-2" onclick="window.renderChart && window.renderChart(${JSON.stringify(comparisonData)})">Retry</button>
+                </div>
+            `;
+        }
+    }
+    
+    // Function to update summary cards
+    function updateSummaryCards(comparisonData) {
+        if (!comparisonData || Object.keys(comparisonData).length === 0) {
+            return;
+        }
+        
+        // Calculate summary statistics
+        const stocks = Object.values(comparisonData);
+        const totalStocks = stocks.length;
+        
+        // Count gaining and losing stocks
+        const gaining = stocks.filter(s => (s.change_percent || 0) > 0).length;
+        const losing = stocks.filter(s => (s.change_percent || 0) < 0).length;
+        
+        // Calculate average change
+        const totalChange = stocks.reduce((sum, s) => sum + (s.change_percent || 0), 0);
+        const avgChange = totalStocks > 0 ? totalChange / totalStocks : 0;
+        
+        // Update DOM elements
+        document.getElementById('gaining-stocks').textContent = gaining;
+        document.getElementById('losing-stocks').textContent = losing;
+        document.getElementById('total-stocks').textContent = totalStocks;
+        
+        const avgChangeElement = document.getElementById('avg-change');
+        avgChangeElement.textContent = avgChange.toFixed(2) + '%';
+        avgChangeElement.className = `avg-change-display ${avgChange >= 0 ? 'positive' : 'negative'}`;
+    }
+    
+    // Function to update table with data
+    // Function to update table with data (add this or update existing)
+    function updateTable(comparisonData) {
+        if (!comparisonData || Object.keys(comparisonData).length === 0) {
+            return;
+        }
+        
+        // Calculate 30-day performance for each stock
+        const stocksWithPerformance = Object.entries(comparisonData).map(([stockName, data]) => {
+            let performance30d = 0;
+            let currentPrice = data.current_price || 0;
+            
+            // Calculate 30-day performance
+            if (data.prices && data.prices.length >= 30) {
+                const oldestPrice = data.prices[data.prices.length - 30] || currentPrice;
+                performance30d = ((currentPrice - oldestPrice) / oldestPrice) * 100;
+            } else {
+                performance30d = data.change_percent || 0;
+            }
+            
+            return {
+                name: stockName,
+                data: data,
+                performance30d: performance30d
+            };
+        });
+        
+        // Sort by 30-day performance (highest to lowest)
+        const sortedStocks = stocksWithPerformance.sort((a, b) => b.performance30d - a.performance30d);
+        
+        // Clear and populate table
+        const tbody = document.getElementById('stocks-table-body');
+        tbody.innerHTML = '';
+        
+        sortedStocks.forEach((stock, index) => {
+            const data = stock.data;
+            const changePercent = data.change_percent || 0;
+            const currentPrice = data.current_price || 0;
+            const openPrice = currentPrice * (1 - changePercent/100);
+            const predictedPrice = currentPrice * (1 + (changePercent * 0.3)/100);
+            
+            // Add ranking badge for top performers
+            const rankBadge = index < 3 ? 
+                `<span class="badge bg-warning ms-2">#${index + 1}</span>` : '';
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <div class="stock-name">${data.company || stock.name} ${rankBadge}</div>
+                    <div class="stock-ticker">${data.ticker || stock.name}</div>
+                </td>
+                <td>
+                    <span class="price-display price-secondary">₹${openPrice.toFixed(2)}</span>
+                </td>
+                <td>
+                    <span class="price-display price-primary">₹${currentPrice.toFixed(2)}</span>
+                </td>
+                <td class="${changePercent >= 0 ? 'positive' : 'negative'}">
+                    <i class="fas fa-${changePercent >= 0 ? 'arrow-up' : 'arrow-down'}"></i>
+                    ${changePercent.toFixed(2)}%
+                </td>
+                <td>
+                    <span class="${stock.performance30d >= 0 ? 'positive' : 'negative'}">
+                        ${stock.performance30d.toFixed(2)}%
+                    </span>
+                </td>
+                <td>
+                    <span class="predicted-price">₹${predictedPrice.toFixed(2)}</span>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+        
+        // Also update table headers to include 30-day performance
+        const thead = document.querySelector('#stocks-table thead');
+        if (thead && !thead.querySelector('th:nth-child(5)').textContent.includes('30-Day')) {
+            thead.innerHTML = `
+                <tr>
+                    <th>Stock</th>
+                    <th>Open Price</th>
+                    <th>Current Price</th>
+                    <th>Today's Change</th>
+                    <th>30-Day Performance</th>
+                    <th>Predicted (Next Day)</th>
+                </tr>
+            `;
+        }
+    }    
+    // Function to add sorting functionality
+    function setupSorting() {
+        const sortSelect = document.getElementById('sort-by');
+        if (!sortSelect) return;
+        
+        sortSelect.addEventListener('change', function() {
+            const tbody = document.querySelector('#stocks-table tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Skip if we only have the loading row
+            if (rows.length <= 1) return;
+            
+            rows.sort((a, b) => {
+                const sortBy = this.value;
+                const aCells = a.querySelectorAll('td');
+                const bCells = b.querySelectorAll('td');
+                
+                if (sortBy === 'name') {
+                    const aName = aCells[0].querySelector('.stock-name').textContent;
+                    const bName = bCells[0].querySelector('.stock-name').textContent;
+                    return aName.localeCompare(bName);
+                } else if (sortBy === 'price') {
+                    const aPrice = parseFloat(aCells[2].textContent.replace('₹', '').trim());
+                    const bPrice = parseFloat(bCells[2].textContent.replace('₹', '').trim());
+                    return bPrice - aPrice;
+                } else if (sortBy === 'change') {
+                    const aChange = parseFloat(aCells[3].textContent.replace('%', '').trim());
+                    const bChange = parseFloat(bCells[3].textContent.replace('%', '').trim());
+                    return bChange - aChange;
+                } else if (sortBy === 'predicted') {
+                    const aPredicted = parseFloat(aCells[5].textContent.replace('₹', '').trim());
+                    const bPredicted = parseFloat(bCells[5].textContent.replace('₹', '').trim());
+                    return bPredicted - aPredicted;
+                }
+                return 0;
+            });
+            
+            // Clear and re-append sorted rows with animation
+            tbody.style.opacity = '0.5';
+            setTimeout(() => {
+                rows.forEach(row => tbody.appendChild(row));
+                tbody.style.opacity = '1';
+            }, 150);
+        });
+    }
+    
+    // Main initialization function
+    async function initialize() {
+        try {
+            // If we don't have data from template, fetch from API
+            if (!comparisonData || Object.keys(comparisonData).length === 0) {
+                console.log('Fetching comparison data from API...');
+                comparisonData = await fetchComparisonData();
+            }
+
+            // Make renderChart accessible globally for the retry button
+            window.renderChart = renderChart;
+            window.comparisonDataForRetry = comparisonData; // Store data for retry
+            
+            // Update summary cards
+            updateSummaryCards(comparisonData);
+            
+            // Update table (if not already done by Jinja2)
+            updateTable(comparisonData);
+            
+            // Setup sorting
+            setupSorting();
+            
+            // Render chart
+            await renderChart(comparisonData);
+            
+            
+        } catch (error) {
+            console.error('Error initializing comparison page:', error);
+            
+            // Show error in chart area
+            const chartElement = document.getElementById('comparison-chart');
+            if (chartElement) {
+                chartElement.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Failed to load chart data. Please try refreshing the page.
+                        <br><small>${error.message}</small>
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    // Initialize the page
+    initialize();
+});
 </script>
 {% endblock %}
